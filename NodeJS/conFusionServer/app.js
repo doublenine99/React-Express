@@ -1,5 +1,4 @@
 var createError = require('http-errors');
-var express = require('express');
 var path = require('path');
 var cookieParser = require('cookie-parser');
 var logger = require('morgan');
@@ -11,22 +10,24 @@ var dishRouter = require('./routes/dishRouter');
 var promoRouter = require('./routes/promoRouter');
 var leaderRouter = require('./routes/leaderRouter');
 var uploadRouter = require('./routes/uploadRouter');
+require('./routes/dishRouter');
+var favoriteRouter = require('./routes/favoriteRouter');
 
 const mongoose = require('mongoose');
 mongoose.Promise = require('bluebird');
 const Dishes = require('./models/dishes');
 const url = config.mongoUrl;
 const connect = mongoose.connect(url);
-
 var session = require('express-session');
 var FileStore = require('session-file-store')(session);
-
 var passport = require('passport');
 var authenticate = require('./authenticate');
-
 connect.then((db) => {
   console.log("Connected correctly to server");
 }, (err) => { console.log(err); });
+
+
+var express = require('express');
 var app = express();
 
 // Secure traffic only
@@ -58,6 +59,23 @@ app.use('/dishes', dishRouter);
 app.use('/promotions', promoRouter);
 app.use('/leaders', leaderRouter);
 app.use('/imageUpload', uploadRouter);
+app.use('/favorites', favoriteRouter);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 // catch 404 and forward to error handler
 app.use(function (req, res, next) {
@@ -73,5 +91,4 @@ app.use(function (err, req, res, next) {
   res.status(err.status || 500);
   res.render('error');
 });
-
 module.exports = app;
