@@ -18,7 +18,7 @@ feedbackRouter.route('/')
             }, (err) => next(err))
             .catch((err) => next(err));
     })
-    .post(cors.corsWithOptions, authenticate.verifyUser, (req, res, next) => {
+    .post(cors.corsWithOptions, (req, res, next) => {
         Feedbacks.create(req.body)
             .then((feedback) => {
                 console.log('Feedback Created ', feedback);
