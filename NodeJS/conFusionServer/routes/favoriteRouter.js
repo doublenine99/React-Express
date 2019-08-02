@@ -93,9 +93,29 @@ favoriteRouter.route('/')
 
 favoriteRouter.route('/:dishId')
     .options(cors.corsWithOptions, (req, res) => { res.sendStatus(200); })
-    .get(cors.cors, (req, res, next) => {
-        res.statusCode = 403;
-        res.end('GET operation not supported on /favorites/:dishId');
+    .get(cors.cors, authenticate.verifyUser, (req, res, next) => {
+        Favorites.findOne({ user: req.user._id })
+            .then((favorites) => {
+                if (!favorites) {
+                    res.statusCode = 200;
+                    res.setHeader('Content-Type', 'application/json');
+                    return res.json({ "exists": false, "favorites": favorites });
+                }
+                else {
+                    if (favorites.dishes.indexOf(req.params.dishId) < 0) {
+                        res.statusCode = 200;
+                        res.setHeader('Content-Type', 'application/json');
+                        return res.json({ "exists": false, "favorites": favorites });
+                    }
+                    else {
+                        res.statusCode = 200;
+                        res.setHeader('Content-Type', 'application/json');
+                        return res.json({ "exists": true, "favorites": favorites });
+                    }
+                }
+
+            }, (err) => next(err))
+            .catch((err) => next(err))
     })
     .post(cors.corsWithOptions, authenticate.verifyUser, (req, res, next) => {
         Dishes.findById(mongoose.Types.ObjectId(req.params.dishId))
@@ -109,12 +129,18 @@ favoriteRouter.route('/:dishId')
                                 newDish.dishes = [mongoose.Types.ObjectId(req.params.dishId)];
                                 FavoriteDishes.create(newDish)
                                     .then((dish) => {
-                                        console.log('Your first fav dish added!!', dish);
-                                        res.statusCode = 200;
-                                        res.setHeader('Content-Type', 'application/json');
-                                        res.json(dish);
-                                    }, (err) => next(err))
-                                    .catch((err) => next(err));
+                                        FavoriteDishes.findById(userFavorites._id)
+                                            .populate('user')
+                                            .populate('dishes')
+                                            .then((favorite) => {
+                                                res.statusCode = 200;
+                                                res.setHeader('Content-Type', 'application/json');
+                                                res.json(favorite);
+                                            })
+                                    })
+                                    .catch((err) => {
+                                        return next(err);
+                                    });
                             } else { // directly push the dish to the list 
                                 if (userFavorites.dishes == null) {
                                     console.log('bbb');
@@ -129,10 +155,19 @@ favoriteRouter.route('/:dishId')
                                     console.log("fav dish: " + userFavorites.dishes);
                                     userFavorites.save()
                                         .then((userFavorites) => {
-                                            res.statusCode = 200;
-                                            res.setHeader('Content-Type', 'application/json');
-                                            res.json(userFavorites);
-                                        }, (err) => next(err));
+                                            FavoriteDishes.findById(userFavorites._id)
+                                                .populate('user')
+                                                .populate('dishes')
+                                                .then((favorite) => {
+                                                    res.statusCode = 200;
+                                                    res.setHeader('Content-Type', 'application/json');
+                                                    res.json(favorite);
+                                                })
+                                        })
+                                        .catch((err) => {
+                                            return next(err);
+                                        });
+
                                 } else {
                                     err = new Error('Dish ' + req.params.dishId + '  has already in your favorite list!');
                                     err.status = 404;
@@ -165,10 +200,18 @@ favoriteRouter.route('/:dishId')
                     userFavorites.dishes.remove(mongoose.Types.ObjectId((req.params.dishId)));
                     userFavorites.save()
                         .then((dish) => {
-                            res.statusCode = 200;
-                            res.setHeader('Content-Type', 'application/json');
-                            res.json(dish);
-                        }, (err) => next(err));
+                            FavoriteDishes.findById(userFavorites._id)
+                                .populate('user')
+                                .populate('dishes')
+                                .then((favorite) => {
+                                    res.statusCode = 200;
+                                    res.setHeader('Content-Type', 'application/json');
+                                    res.json(favorite);
+                                })
+                        })
+                        .catch((err) => {
+                            return next(err);
+                        });
                 }
                 else {
                     err = new Error('Dish ' + req.params.dishId + ' not found in user\'s favorite lists');
